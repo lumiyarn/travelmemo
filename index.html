@@ -83,7 +83,7 @@
             
             document.getElementById('result' + type).innerHTML = "조회 중...";
             
-            // API 우회 주소
+            // 에러를 해결하는 HTTPS 우회 주소 적용
             const url = encodeURIComponent(`http://api.aviationstack.com/v1/flights?access_key=${apiKey}&flight_iata=${num}`);
 
             fetch(`https://api.allorigins.win/raw?url=${url}`)
@@ -107,7 +107,7 @@
                             <button onclick="window.deleteFlight(${type})" style="margin-top:15px; background:#ff4444; color:white; border:none; padding: 5px 10px; border-radius:4px;">기록 삭제</button>
                         </div>
                     `;
-                    set(ref(db, 'flight' + type), html); // Firebase 저장
+                    set(ref(db, 'flight' + type), html);
                 } else {
                     document.getElementById('result' + type).innerHTML = "정보를 찾을 수 없습니다.";
                 }
