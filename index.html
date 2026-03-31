@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>여행 일정 관리</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; }
+        .box { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+        .item { padding: 15px; background: #f9f9f9; margin-bottom: 8px; border-radius: 5px; cursor: grab; display: flex; justify-content: space-between; align-items: center; }
+        button { cursor: pointer; padding: 5px 10px; }
+        input[type="text"], input[type="date"] { padding: 8px; margin-bottom: 5px; width: 45%; }
+        .item label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>✈️ 여행 일정 관리</h2>
+    <p>계정: impd1203@gmail.com</p>
+
+    <div class="box">
+        <h3>🛫 가는 편 비행기</h3>
+        <input type="date" id="date1">
+        <input type="text" id="num1" placeholder="편명 (예: KE081)">
+        <button onclick="searchFlight(1)">조회</button>
+        <div id="result1" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="box">
+        <h3>🛬 오는 편 비행기</h3>
+        <input type="date" id="date2">
+        <input type="text" id="num2" placeholder="편명 (예: OZ522)">
+        <button onclick="searchFlight(2)">조회</button>
+        <div id="result2" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="box">
+        <h3>일정 및 준비물</h3>
+        <div id="itemList"></div>
+        <div style="margin-top: 10px;">
+            <input type="text" id="newItem" placeholder="새로운 일정이나 준비물" style="width: 70%;">
+            <button onclick="addItem()">추가</button>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = "afb3990ec05a6fba1732ceca33cc8ca8";
+
+        window.onload = function() {
+            if(localStorage.getItem('flight1')) document.getElementById('result1').innerHTML = localStorage.getItem('flight1');
+            if(localStorage.getItem('flight2')) document.getElementById('result2').innerHTML = localStorage.getItem('flight2');
+            if(localStorage.getItem('items')) document.getElementById('itemList').innerHTML = localStorage.getItem('items');
+            
+            new Sortable(document.getElementById('itemList'), { 
+                animation: 150,
+                onEnd: saveItems
+            });
+        };
+
+        function searchFlight(type) {
+            const date = document.getElementById('date' + type).value;
+            const num = document.getElementById('num' + type).value;
+            const resultDiv = document.getElementById('result' + type);
+            
+            if(!date || !num) { alert("날짜와 편명을 모두 입력해주세요."); return; }
+            resultDiv.innerHTML = "조회 중...";
+
+            fetch(`http://api.aviationstack.com/v1/flights?access_key=${apiKey}&flight_iata=${num}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.data && data.data.length > 0) {
+                    const flight = data.data[0];
+                    const dep = flight.departure;
+                    const arr = flight.arrival;
+                    const depTime = dep.scheduled ? dep.scheduled.substring(11, 16) : "-";
+                    const arrTime = arr.scheduled ? arr.scheduled.substring(11, 16) : "-";
+
+                    const html = `
+                        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: white;">
+                            <div style="color: #d32f2f; font-weight: bold; margin-bottom: 10px;">📅 ${date} | ✈️ ${flight.airline.name} (${num})</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h2 style="margin: 0;">${dep.iata}</h2>
+                                    <p style="margin: 5px 0; font-size: 18px; font-weight: bold;">출발: ${depTime}</p>
+                                </div>
+                                <div style="flex-grow: 1; border-top: 2px solid #d32f2f; margin: 0 15px;"></div>
+                                <div style="text-align: right;">
+                                    <h2 style="margin: 0;">${arr.iata}</h2>
+                                    <p style="margin: 5px 0; font-size: 18px; font-weight: bold;">도착: ${arrTime}</p>
+                                </div>
+                            </div>
+                            <button onclick="deleteFlight(${type})" style="margin-top:15px; background:#ff4444; color:white; border:none; border-radius:4px; padding: 5px 10px;">기록 삭제</button>
+                        </div>
+                    `;
+                    resultDiv.innerHTML = html;
+                    localStorage.setItem('flight' + type, html);
+                } else {
+                    resultDiv.innerHTML = "정보를 찾을 수 없습니다.";
+                }
+            });
+        }
+
+        function deleteFlight(type) {
+            document.getElementById('result' + type).innerHTML = "";
+            localStorage.removeItem('flight' + type);
+        }
+
+        function addItem() {
+            const text = document.getElementById('newItem').value;
+            if(!text) return;
+            
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `
+                <label>
+                    <input type="checkbox" onchange="toggleCheck(this)"> <span>${text}</span>
+                </label>
+                <button onclick="removeItem(this)">삭제</button>
+            `;
+            
+            document.getElementById('itemList').appendChild(div);
+            document.getElementById('newItem').value = '';
+            saveItems();
+        }
+
+        function toggleCheck(checkbox) {
+            if(checkbox.checked) {
+                checkbox.setAttribute('checked', 'checked');
+            } else {
+                checkbox.removeAttribute('checked');
+            }
+            saveItems();
+        }
+
+        function removeItem(btn) {
+            btn.parentElement.remove();
+            saveItems();
+        }
+
+        function saveItems() {
+            localStorage.setItem('items', document.getElementById('itemList').innerHTML);
+        }
+    </script>
+</body>
+</html>
