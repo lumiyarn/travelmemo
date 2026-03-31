@@ -23,7 +23,7 @@
         <h3>🛫 가는 편 비행기</h3>
         <input type="date" id="date1">
         <input type="text" id="num1" placeholder="편명 (예: KE081)">
-        <button onclick="window.searchFlight(1)">조회</button>
+        <button type="button" onclick="window.searchFlight(1)">조회</button>
         <div id="result1" style="margin-top: 10px;"></div>
     </div>
 
@@ -31,7 +31,7 @@
         <h3>🛬 오는 편 비행기</h3>
         <input type="date" id="date2">
         <input type="text" id="num2" placeholder="편명 (예: OZ522)">
-        <button onclick="window.searchFlight(2)">조회</button>
+        <button type="button" onclick="window.searchFlight(2)">조회</button>
         <div id="result2" style="margin-top: 10px;"></div>
     </div>
 
@@ -40,7 +40,7 @@
         <div id="itemList"></div>
         <div style="margin-top: 10px;">
             <input type="text" id="newItem" placeholder="새로운 일정이나 준비물" style="width: 70%;">
-            <button onclick="window.addItem()">추가</button>
+            <button type="button" onclick="window.addItem()">추가</button>
         </div>
     </div>
 
@@ -48,7 +48,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-        // 보내주신 Firebase 설정 (데이터베이스 URL 추가)
         const firebaseConfig = {
             apiKey: "AIzaSyDVj_UmU-EJ58sUD056UAexa_k1soZwJDg",
             authDomain: "travelmemo-bd4f3.firebaseapp.com",
@@ -61,29 +60,21 @@
         
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-
         const apiKey = "afb3990ec05a6fba1732ceca33cc8ca8";
 
-        // 1. 실시간 데이터 수신 (친구가 변경해도 즉시 반영)
         onValue(ref(db, 'flight1'), (snapshot) => { document.getElementById('result1').innerHTML = snapshot.val() || ""; });
         onValue(ref(db, 'flight2'), (snapshot) => { document.getElementById('result2').innerHTML = snapshot.val() || ""; });
         onValue(ref(db, 'items'), (snapshot) => { 
             document.getElementById('itemList').innerHTML = snapshot.val() || ""; 
-            new Sortable(document.getElementById('itemList'), { 
-                animation: 150, 
-                onEnd: window.saveItems 
-            });
+            new Sortable(document.getElementById('itemList'), { animation: 150, onEnd: window.saveItems });
         });
 
-        // 2. 비행기 조회 (HTTPS 보안 우회 적용)
         window.searchFlight = function(type) {
             const date = document.getElementById('date' + type).value;
             const num = document.getElementById('num' + type).value;
             if(!date || !num) { alert("날짜와 편명을 모두 입력해주세요."); return; }
             
             document.getElementById('result' + type).innerHTML = "조회 중...";
-            
-            // 에러를 해결하는 HTTPS 우회 주소 적용
             const url = encodeURIComponent(`http://api.aviationstack.com/v1/flights?access_key=${apiKey}&flight_iata=${num}`);
 
             fetch(`https://api.allorigins.win/raw?url=${url}`)
@@ -100,11 +91,19 @@
                         <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: white;">
                             <div style="color: #d32f2f; font-weight: bold; margin-bottom: 10px;">📅 ${date} | ✈️ ${flight.airline.name} (${num})</div>
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div><h2 style="margin: 0;">${dep.iata}</h2><p style="margin: 5px 0; font-weight: bold;">출발: ${depTime}</p></div>
+                                <div>
+                                    <h2 style="margin: 0;">${dep.iata}</h2>
+                                    <p style="margin: 5px 0; font-weight: bold;">출발: ${depTime}</p>
+                                    <p style="margin: 0; color: #555; font-size: 14px;">터미널: ${dep.terminal || '-'} / 게이트: ${dep.gate || '-'}</p>
+                                </div>
                                 <div style="flex-grow: 1; border-top: 2px solid #d32f2f; margin: 0 15px;"></div>
-                                <div style="text-align: right;"><h2 style="margin: 0;">${arr.iata}</h2><p style="margin: 5px 0; font-weight: bold;">도착: ${arrTime}</p></div>
+                                <div style="text-align: right;">
+                                    <h2 style="margin: 0;">${arr.iata}</h2>
+                                    <p style="margin: 5px 0; font-weight: bold;">도착: ${arrTime}</p>
+                                    <p style="margin: 0; color: #555; font-size: 14px;">터미널: ${arr.terminal || '-'} / 게이트: ${arr.gate || '-'}</p>
+                                </div>
                             </div>
-                            <button onclick="window.deleteFlight(${type})" style="margin-top:15px; background:#ff4444; color:white; border:none; padding: 5px 10px; border-radius:4px;">기록 삭제</button>
+                            <button type="button" onclick="window.deleteFlight(${type})" style="margin-top:15px; background:#ff4444; color:white; border:none; padding: 5px 10px; border-radius:4px;">기록 삭제</button>
                         </div>
                     `;
                     set(ref(db, 'flight' + type), html);
@@ -122,7 +121,7 @@
             if(!text) return;
             const div = document.createElement('div');
             div.className = 'item';
-            div.innerHTML = `<label><input type="checkbox" onchange="window.toggleCheck(this)"> <span>${text}</span></label><button onclick="window.removeItem(this)">삭제</button>`;
+            div.innerHTML = `<label><input type="checkbox" onchange="window.toggleCheck(this)"> <span>${text}</span></label><button type="button" onclick="window.removeItem(this)">삭제</button>`;
             document.getElementById('itemList').appendChild(div);
             document.getElementById('newItem').value = '';
             window.saveItems();
