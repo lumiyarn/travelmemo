@@ -3,26 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>여행 일정 관리</title>
+    <title>Travel Memo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f5f5f5; }
         .box { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 12px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         h3 { margin-top: 0; display: flex; align-items: center; gap: 8px; }
         
-        details { border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; overflow: hidden; background: #fff; }
-        summary { padding: 12px; background: #f9f9f9; cursor: pointer; font-weight: bold; list-style: none; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+        /* 1. 글자 선택 방지 */
+        details, summary, .item { user-select: none; -webkit-user-select: none; }
+
+        details { border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; overflow: hidden; background: #fff; transition: all 0.3s; }
+        summary { padding: 12px; background: #f9f9f9; cursor: pointer; font-weight: bold; list-style: none; display: flex; justify-content: space-between; align-items: center; }
         summary::after { content: '▼'; font-size: 12px; color: #aaa; margin-left: auto; padding-left: 10px; }
         details[open] summary::after { content: '▲'; }
         
         .toggle-content { padding: 10px; min-height: 40px; background: #fafafa; border: 1px dashed #ddd; margin: 5px; border-radius: 6px; }
 
-        .item { padding: 12px; background: #fff; border: 1px solid #eee; margin-bottom: 5px; border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); user-select: none; }
-        .item label { display: flex; align-items: center; gap: 8px; flex-grow: 1; cursor: pointer; margin: 0; }
-        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        .item { padding: 12px; background: #fff; border: 1px solid #eee; margin-bottom: 5px; border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; font-size: 14px; transition: all 0.3s; }
+        .item label { display: flex; align-items: center; gap: 8px; flex-grow: 1; cursor: pointer; margin: 0; pointer-events: none; }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; pointer-events: auto; }
         
-        .del-btn, .del-toggle-btn { display: none; background: #ffeded; color: #ff4444; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 10px;}
+        /* 스와이프 시 나타나는 삭제 버튼 */
+        .del-btn, .del-toggle-btn { display: none; background: #ffeded; color: #ff4444; border: none; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 10px; white-space: nowrap; pointer-events: auto; }
         .show-delete .del-btn, .show-delete .del-toggle-btn { display: inline-block; }
+        .show-delete summary { background: #fff5f5; }
+        .show-delete.item { background: #fff5f5; }
 
         .input-group { display: flex; gap: 5px; margin-top: 15px; flex-wrap: wrap; border-top: 1px solid #eee; padding-top: 15px; }
         input[type="text"], input[type="date"], select { padding: 10px; border: 1px solid #ddd; border-radius: 6px; flex-grow: 1; min-width: 100px; }
@@ -34,8 +40,7 @@
     </style>
 </head>
 <body>
-    <h2 style="text-align:center;">✈️ 우리들의 여행 일지</h2>
-    <p style="font-size:11px; color:#aaa; text-align:center;">계정: impd1203@gmail.com<br><span style="color:#ff4444; font-weight:bold;">※ 항목이나 토글을 '2초 이상 꾸욱' 누르면 삭제 버튼이 나타납니다.</span></p>
+    <h2 style="text-align:center;">✈️ Travel Memo</h2>
 
     <div class="box">
         <h3>🛫 가는 편 비행기</h3>
@@ -119,17 +124,35 @@
             return '📌';
         };
 
-        // 롱 프레스(2초) 감지 로직
-        let pressTimer;
-        window.startLongPress = function(element) {
-            window.cancelLongPress();
-            pressTimer = setTimeout(() => {
-                element.classList.toggle('show-delete');
-            }, 2000); // 2초 설정
+        // 스와이프 감지 로직
+        let startX = 0;
+        let startY = 0;
+
+        window.handleTouchStart = (e) => {
+            if(e.touches) {
+                startX = e.touches[0].screenX;
+                startY = e.touches[0].screenY;
+            } else {
+                startX = e.clientX;
+                startY = e.clientY;
+            }
         };
 
-        window.cancelLongPress = function() {
-            clearTimeout(pressTimer);
+        window.handleTouchEnd = (e, element) => {
+            let endX = e.changedTouches ? e.changedTouches[0].screenX : e.clientX;
+            let endY = e.changedTouches ? e.changedTouches[0].screenY : e.clientY;
+            
+            let diffX = startX - endX;
+            let diffY = startY - endY;
+
+            // X축으로 40px 이상 왼쪽으로 밀고, Y축 스크롤은 적을 때
+            if (diffX > 40 && Math.abs(diffY) < 40) {
+                element.classList.add('show-delete');
+            } 
+            // 오른쪽으로 밀면 삭제 버튼 숨김
+            else if (diffX < -40 && Math.abs(diffY) < 40) {
+                element.classList.remove('show-delete');
+            }
         };
 
         const loadCategories = (type) => {
@@ -168,9 +191,12 @@
                         const details = document.createElement('details');
                         details.open = true;
                         details.setAttribute('data-id', id);
-                        // 토글 롱 프레스 이벤트 추가
+                        
+                        // 토글 제목 스와이프 이벤트
                         details.innerHTML = `
-                            <summary onmousedown="window.startLongPress(this.parentElement)" onmouseup="window.cancelLongPress()" onmouseleave="window.cancelLongPress()" ontouchstart="window.startLongPress(this.parentElement)" ontouchend="window.cancelLongPress()" ontouchmove="window.cancelLongPress()">
+                            <summary 
+                                ontouchstart="window.handleTouchStart(event)" ontouchend="window.handleTouchEnd(event, this.parentElement)"
+                                onmousedown="window.handleTouchStart(event)" onmouseup="window.handleTouchEnd(event, this.parentElement)">
                                 <span>${emoji} ${label}</span>
                                 <button type="button" class="del-toggle-btn" onclick="window.removeCategory('${type}', '${id}', event)">삭제</button>
                             </summary>
@@ -191,12 +217,12 @@
                                     new Sortable(el, { 
                                         animation: 150, 
                                         group: type,
-                                        delay: 100, // 드래그 시 약간의 딜레이를 주어 터치와 겹침 방지
-                                        delayOnTouchOnly: true,
+                                        delay: 1500, // 2. 꾸욱 누르기 (1.5초 딜레이)
+                                        delayOnTouchOnly: true, // 모바일에서만 딜레이 적용
+                                        fallbackTolerance: 10, // 누르고 있을 때 손가락 약간의 흔들림 허용
                                         onEnd: (evt) => {
                                             const fromId = evt.from.id.replace(`list-${type}-`, '');
                                             set(ref(db, `items/${type}/${fromId}`), evt.from.innerHTML);
-                                            
                                             if(evt.from !== evt.to) {
                                                 const toId = evt.to.id.replace(`list-${type}-`, '');
                                                 set(ref(db, `items/${type}/${toId}`), evt.to.innerHTML);
@@ -213,8 +239,9 @@
                         new Sortable(container, {
                             animation: 150,
                             handle: 'summary',
-                            delay: 100,
+                            delay: 1500, // 카테고리 순서 이동도 1.5초 꾸욱 누르기 적용
                             delayOnTouchOnly: true,
+                            fallbackTolerance: 10,
                             onEnd: () => {
                                 const newOrder = Array.from(container.children).map(child => child.getAttribute('data-id'));
                                 set(orderRef, newOrder);
@@ -247,9 +274,12 @@
             if(!catId || !input.value) return;
 
             const listEl = document.getElementById(`list-${type}-${catId}`);
-            // 아이템 롱 프레스 이벤트 추가
+            
+            // 항목 스와이프 이벤트
             const htmlString = `
-                <div class="item" onmousedown="window.startLongPress(this)" onmouseup="window.cancelLongPress()" onmouseleave="window.cancelLongPress()" ontouchstart="window.startLongPress(this)" ontouchend="window.cancelLongPress()" ontouchmove="window.cancelLongPress()">
+                <div class="item" 
+                    ontouchstart="window.handleTouchStart(event)" ontouchend="window.handleTouchEnd(event, this)"
+                    onmousedown="window.handleTouchStart(event)" onmouseup="window.handleTouchEnd(event, this)">
                     <label><input type="checkbox" onchange="window.syncCheck(this, '${type}', '${catId}')"> <span>${input.value}</span></label>
                     <button type="button" class="del-btn" onclick="window.removeItem(this, '${type}', '${catId}')">삭제</button>
                 </div>
@@ -299,7 +329,7 @@
                         <strong>${f.airline.name} (${num})</strong><br>
                         ${dep.iata} (${dep.scheduled ? dep.scheduled.substring(11,16) : '-'}) ➔ ${arr.iata} (${arr.scheduled ? arr.scheduled.substring(11,16) : '-'})<br>
                         <small style="color:#666;">터미널: ${dep.terminal || '-'} / 게이트: ${dep.gate || '-'}</small><br>
-                        <button type="button" class="del-btn" style="display:inline-block;" onclick="window.deleteFlight(${type})">기록 삭제</button>
+                        <button type="button" class="del-btn" style="display:inline-block; margin-left:0; margin-top:10px;" onclick="window.deleteFlight(${type})">기록 삭제</button>
                     </div>`;
                     set(ref(db, 'flight' + type), html);
                     
