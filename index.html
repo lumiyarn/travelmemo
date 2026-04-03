@@ -20,11 +20,6 @@
     <h2>✈️ 여행 일정 관리</h2>
     
     <div class="box">
-        <h3>🌤️ 현지 날씨 (자동 동기화)</h3>
-        <div id="weatherResult" style="display:flex; overflow-x:auto; gap:10px; padding-bottom:5px; color:#666;">비행기를 조회하면 날씨가 표시됩니다.</div>
-    </div>
-
-    <div class="box">
         <h3>🛫 가는 편 비행기</h3>
         <input type="date" id="date1">
         <input type="text" id="num1" placeholder="편명 (예: KE081)">
@@ -38,6 +33,11 @@
         <input type="text" id="num2" placeholder="편명 (예: OZ522)">
         <button type="button" onclick="window.searchFlight(2)">조회</button>
         <div id="result2" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="box">
+        <h3>🌤️ 현지 날씨 (자동 동기화)</h3>
+        <div id="weatherResult" style="display:flex; overflow-x:auto; gap:10px; padding-bottom:5px; color:#666;">비행기 정보를 조회하면 날씨가 표시됩니다.</div>
     </div>
 
     <div class="box">
@@ -76,24 +76,27 @@
         const db = getDatabase(app);
         const apiKey = "afb3990ec05a6fba1732ceca33cc8ca8";
 
-        let destIata = ""; // 날씨를 위한 목적지 공항 코드 저장 변수
+        let destIata = "", startDate = "", endDate = "";
 
-        // 파이어베이스 데이터 실시간 연동
-        onValue(ref(db, 'flight1'), (snapshot) => { document.getElementById('result1').innerHTML = snapshot.val() || ""; });
-        onValue(ref(db, 'flight2'), (snapshot) => { document.getElementById('result2').innerHTML = snapshot.val() || ""; });
-        onValue(ref(db, 'weatherHtml'), (snapshot) => { document.getElementById('weatherResult').innerHTML = snapshot.val() || "비행기를 조회하면 날씨가 표시됩니다."; });
-        onValue(ref(db, 'destIata'), (snapshot) => { destIata = snapshot.val() || ""; updateWeather(); });
+        // 데이터베이스 수신
+        onValue(ref(db, 'flight1'), (s) => { document.getElementById('result1').innerHTML = s.val() || ""; });
+        onValue(ref(db, 'flight2'), (s) => { document.getElementById('result2').innerHTML = s.val() || ""; });
+        onValue(ref(db, 'weatherHtml'), (s) => { document.getElementById('weatherResult').innerHTML = s.val() || "비행기 정보를 조회하면 날씨가 표시됩니다."; });
         
-        onValue(ref(db, 'prepareItems'), (snapshot) => { 
-            document.getElementById('prepareList').innerHTML = snapshot.val() || ""; 
+        // 날짜 데이터를 개별 저장하여 새로고침해도 날씨가 동기화되도록 수정
+        onValue(ref(db, 'destIata'), (s) => { destIata = s.val() || ""; window.updateWeather(); });
+        onValue(ref(db, 'startDate'), (s) => { startDate = s.val() || ""; window.updateWeather(); });
+        onValue(ref(db, 'endDate'), (s) => { endDate = s.val() || ""; window.updateWeather(); });
+        
+        onValue(ref(db, 'prepareItems'), (s) => { 
+            document.getElementById('prepareList').innerHTML = s.val() || ""; 
             new Sortable(document.getElementById('prepareList'), { animation: 150, onEnd: () => window.saveItems('prepare') });
         });
-        onValue(ref(db, 'scheduleItems'), (snapshot) => { 
-            document.getElementById('scheduleList').innerHTML = snapshot.val() || ""; 
+        onValue(ref(db, 'scheduleItems'), (s) => { 
+            document.getElementById('scheduleList').innerHTML = s.val() || ""; 
             new Sortable(document.getElementById('scheduleList'), { animation: 150, onEnd: () => window.saveItems('schedule') });
         });
 
-        // 날씨 픽토그램 변환 함수
         function getWeatherEmoji(code) {
             if (code <= 1) return '☀️';
             if (code <= 3) return '⛅';
@@ -105,33 +108,26 @@
             return '⛈️';
         }
 
-        // 날씨 자동 업데이트 함수
-        async function updateWeather() {
-            const d1 = document.getElementById('date1').value;
-            const d2 = document.getElementById('date2').value;
-            if(!d1 || !d2 || !destIata) return;
-
-            set(ref(db, 'weatherHtml'), "날씨 정보 조회 중...");
+        window.updateWeather = async function() {
+            if(!startDate || !endDate || !destIata) return;
 
             try {
-                // 공항 코드로 위도/경도 찾기
                 const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${destIata}&count=1`);
                 const geoData = await geoRes.json();
-                if(!geoData.results) throw new Error("도시 찾기 실패");
+                if(!geoData.results) throw new Error("도시 검색 실패");
                 
                 const { latitude, longitude } = geoData.results[0];
-                // 위도/경도로 날씨 예보 조회
-                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,precipitation_probability_max&timezone=auto&start_date=${d1}&end_date=${d2}`);
+                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,precipitation_probability_max&timezone=auto&start_date=${startDate}&end_date=${endDate}`);
                 const wData = await wRes.json();
 
                 if(wData.error) throw new Error("예보 기간 초과");
 
                 let html = "";
                 for(let i=0; i<wData.daily.time.length; i++) {
-                    const dateStr = wData.daily.time[i].substring(5); // 월-일 추출
+                    const dateStr = wData.daily.time[i].substring(5);
                     const code = wData.daily.weathercode[i];
                     const temp = wData.daily.temperature_2m_max[i];
-                    const rain = wData.daily.precipitation_probability_max[i];
+                    const rain = wData.daily.precipitation_probability_max[i] || 0;
                     
                     html += `
                         <div class="weather-card">
@@ -142,13 +138,12 @@
                         </div>
                     `;
                 }
-                set(ref(db, 'weatherHtml'), html); // 날씨 정보도 파이어베이스에 저장하여 동기화
+                set(ref(db, 'weatherHtml'), html);
             } catch(e) {
-                set(ref(db, 'weatherHtml'), "날씨 정보 없음");
+                set(ref(db, 'weatherHtml'), "해당 날짜의 날씨 정보가 없거나 예보 기간(최대 16일)을 초과했습니다.");
             }
-        }
+        };
 
-        // 비행기 조회 함수
         window.searchFlight = function(type) {
             const date = document.getElementById('date' + type).value;
             const num = document.getElementById('num' + type).value;
@@ -157,9 +152,18 @@
             document.getElementById('result' + type).innerHTML = "조회 중...";
             const url = encodeURIComponent(`http://api.aviationstack.com/v1/flights?access_key=${apiKey}&flight_iata=${num}`);
 
-            fetch(`https://api.allorigins.win/raw?url=${url}`)
+            // 우회 서버 안정성 강화를 위해 파싱 방식 변경
+            fetch(`https://api.allorigins.win/get?url=${url}`)
             .then(res => res.json())
-            .then(data => {
+            .then(proxyData => {
+                const data = JSON.parse(proxyData.contents);
+                
+                // API 한도 초과 등 에러 발생 시 안내
+                if(data.error) {
+                    document.getElementById('result' + type).innerHTML = `API 에러: 무료 한도(월 100건) 초과 또는 잘못된 요청입니다.`;
+                    return;
+                }
+                
                 if(data.data && data.data.length > 0) {
                     const flight = data.data[0];
                     const dep = flight.departure;
@@ -167,40 +171,35 @@
                     const depTime = dep.scheduled ? dep.scheduled.substring(11, 16) : "-";
                     const arrTime = arr.scheduled ? arr.scheduled.substring(11, 16) : "-";
 
-                    // 가는 편 비행기 조회 시 목적지 공항 코드를 파이어베이스에 저장 (날씨 조회용)
-                    if(type === 1) set(ref(db, 'destIata'), arr.iata); 
+                    // 날짜 개별 저장 로직 추가
+                    if(type === 1) {
+                        set(ref(db, 'destIata'), arr.iata);
+                        set(ref(db, 'startDate'), date);
+                    } else if(type === 2) {
+                        set(ref(db, 'endDate'), date);
+                    }
 
                     const html = `
                         <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: white;">
                             <div style="color: #d32f2f; font-weight: bold; margin-bottom: 10px;">📅 ${date} | ✈️ ${flight.airline.name} (${num})</div>
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h2 style="margin: 0;">${dep.iata}</h2>
-                                    <p style="margin: 5px 0; font-weight: bold;">출발: ${depTime}</p>
-                                    <p style="margin: 0; color: #555; font-size: 14px;">터미널: ${dep.terminal || '-'} / 게이트: ${dep.gate || '-'}</p>
-                                </div>
+                                <div><h2 style="margin: 0;">${dep.iata}</h2><p style="margin: 5px 0; font-weight: bold;">출발: ${depTime}</p><p style="margin: 0; color: #555; font-size: 14px;">터미널: ${dep.terminal || '-'} / 게이트: ${dep.gate || '-'}</p></div>
                                 <div style="flex-grow: 1; border-top: 2px solid #d32f2f; margin: 0 15px;"></div>
-                                <div style="text-align: right;">
-                                    <h2 style="margin: 0;">${arr.iata}</h2>
-                                    <p style="margin: 5px 0; font-weight: bold;">도착: ${arrTime}</p>
-                                    <p style="margin: 0; color: #555; font-size: 14px;">터미널: ${arr.terminal || '-'} / 게이트: ${arr.gate || '-'}</p>
-                                </div>
+                                <div style="text-align: right;"><h2 style="margin: 0;">${arr.iata}</h2><p style="margin: 5px 0; font-weight: bold;">도착: ${arrTime}</p><p style="margin: 0; color: #555; font-size: 14px;">터미널: ${arr.terminal || '-'} / 게이트: ${arr.gate || '-'}</p></div>
                             </div>
                             <button type="button" onclick="window.deleteFlight(${type})" style="margin-top:15px; background:#ff4444; color:white; border:none; padding: 5px 10px; border-radius:4px;">기록 삭제</button>
                         </div>
                     `;
                     set(ref(db, 'flight' + type), html);
-                    updateWeather(); // 비행기 조회 완료 시 날씨 동기화 시도
                 } else {
                     document.getElementById('result' + type).innerHTML = "정보를 찾을 수 없습니다.";
                 }
             })
-            .catch(() => { document.getElementById('result' + type).innerHTML = "조회 오류가 발생했습니다."; });
+            .catch(() => { document.getElementById('result' + type).innerHTML = "조회 오류가 발생했습니다. (우회 서버 지연)"; });
         };
 
         window.deleteFlight = function(type) { set(ref(db, 'flight' + type), ""); };
 
-        // 구역이 2개이므로 listType 파라미터 추가
         window.addItem = function(listType) {
             const inputId = listType === 'prepare' ? 'newPrepare' : 'newSchedule';
             const listId = listType === 'prepare' ? 'prepareList' : 'scheduleList';
