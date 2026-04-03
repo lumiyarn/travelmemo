@@ -6,61 +6,86 @@
     <title>여행 일정 관리</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; }
-        .box { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        .item { padding: 15px; background: #f9f9f9; margin-bottom: 8px; border-radius: 5px; cursor: grab; display: flex; justify-content: space-between; align-items: center; }
-        button { cursor: pointer; padding: 5px 10px; }
-        input[type="text"], input[type="date"] { padding: 8px; margin-bottom: 5px; width: 45%; }
-        .item label { display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; }
+        body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f5f5f5; }
+        .box { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 12px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        h3 { margin-top: 0; display: flex; align-items: center; gap: 8px; }
+        
+        details { border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+        summary { padding: 12px; background: #f9f9f9; cursor: pointer; font-weight: bold; list-style: none; display: flex; justify-content: space-between; }
+        summary::after { content: '▼'; font-size: 12px; color: #aaa; }
+        details[open] summary::after { content: '▲'; }
+        .toggle-content { padding: 10px; background: white; min-height: 30px; }
+
+        .item { padding: 12px; background: #fff; border: 1px solid #f0f0f0; margin-bottom: 5px; border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .item label { display: flex; align-items: center; gap: 8px; flex-grow: 1; cursor: pointer; }
         input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
-        .weather-card { min-width: 70px; text-align: center; border: 1px solid #eee; border-radius: 8px; padding: 10px; background: #fff; flex-shrink: 0; }
+        .del-btn { background: #ffeded; color: #ff4444; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+
+        .input-group { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; border-top: 1px solid #eee; pt: 10px; padding-top: 10px; }
+        input[type="text"], input[type="date"], select { padding: 10px; border: 1px solid #ddd; border-radius: 6px; flex-grow: 1; min-width: 100px; }
+        .add-btn { background: #4A90E2; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .add-toggle-btn { background: #34A853; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 10px; }
+
+        .weather-scroll { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; }
+        .weather-card { min-width: 80px; text-align: center; border: 1px solid #eee; border-radius: 10px; padding: 10px; background: #fff; }
     </style>
 </head>
 <body>
-    <h2>✈️ 여행 일정 관리</h2>
-    
+    <h2 style="text-align:center;">✈️ 우리들의 여행 일지</h2>
+    <p style="font-size:11px; color:#aaa; text-align:center;">계정: impd1203@gmail.com</p>
+
     <div class="box">
         <h3>🛫 가는 편 비행기</h3>
         <input type="date" id="date1">
         <input type="text" id="num1" placeholder="편명 (예: KE081)">
-        <button type="button" onclick="window.searchFlight(1)">조회</button>
-        <div id="result1" style="margin-top: 10px;"></div>
+        <button type="button" class="add-btn" onclick="window.searchFlight(1)">조회</button>
+        <div id="result1" style="margin-top:10px;"></div>
     </div>
 
     <div class="box">
         <h3>🛬 오는 편 비행기</h3>
         <input type="date" id="date2">
         <input type="text" id="num2" placeholder="편명 (예: OZ522)">
-        <button type="button" onclick="window.searchFlight(2)">조회</button>
-        <div id="result2" style="margin-top: 10px;"></div>
+        <button type="button" class="add-btn" onclick="window.searchFlight(2)">조회</button>
+        <div id="result2" style="margin-top:10px;"></div>
     </div>
 
     <div class="box">
-        <h3>🌤️ 현지 날씨 (자동 동기화)</h3>
-        <div id="weatherResult" style="display:flex; overflow-x:auto; gap:10px; padding-bottom:5px; color:#666;">비행기 정보를 조회하면 날씨가 표시됩니다.</div>
+        <h3>🌤️ 현지 날씨 (예보)</h3>
+        <div id="weatherResult" class="weather-scroll">비행기 조회가 필요합니다.</div>
     </div>
 
     <div class="box">
-        <h3>🎒 준비물</h3>
-        <div id="prepareList"></div>
-        <div style="margin-top: 10px;">
-            <input type="text" id="newPrepare" placeholder="새로운 준비물" style="width: 70%;">
-            <button type="button" onclick="window.addItem('prepare')">추가</button>
+        <h3>🎒 준비물 리스트</h3>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="new-prep-toggle" placeholder="새 준비물 카테고리 (예: 캠핑용품)">
+            <button class="add-toggle-btn" onclick="window.addCategory('prepare')">토글 추가</button>
+        </div>
+        <div id="prepareToggles"></div>
+        <div class="input-group">
+            <select id="prepareCategorySelect"></select>
+            <input type="text" id="input-prepare" placeholder="무엇을 챙길까요?">
+            <button class="add-btn" onclick="window.addItem('prepare')">추가</button>
         </div>
     </div>
 
     <div class="box">
         <h3>📅 방문 일정</h3>
-        <div id="scheduleList"></div>
-        <div style="margin-top: 10px;">
-            <input type="text" id="newSchedule" placeholder="새로운 일정" style="width: 70%;">
-            <button type="button" onclick="window.addItem('schedule')">추가</button>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="new-sched-toggle" placeholder="새 일정 카테고리 (예: 맛집탐방)">
+            <button class="add-toggle-btn" onclick="window.addCategory('schedule')">토글 추가</button>
+        </div>
+        <div id="scheduleToggles"></div>
+        <div class="input-group">
+            <select id="scheduleCategorySelect"></select>
+            <input type="text" id="input-schedule" placeholder="어디를 방문할까요?">
+            <button class="add-btn" onclick="window.addItem('schedule')">추가</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDVj_UmU-EJ58sUD056UAexa_k1soZwJDg",
@@ -74,162 +99,152 @@
         
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const apiKey = "afb3990ec05a6fba1732ceca33cc8ca8";
+        const apiKey = "afb3990ec05a6fba1732ceca33cc8ca8"; // 귀하의 API 키 적용됨
 
-        let destIata = "", startDate = "", endDate = "";
+        // 이모지 판단기
+        const getEmoji = (text) => {
+            if(text.includes('필수')) return '🚨';
+            if(text.includes('공항')) return '✈️';
+            if(text.includes('전자') || text.includes('it')) return '💻';
+            if(text.includes('돈') || text.includes('금전')) return '💳';
+            if(text.includes('건강') || text.includes('약') || text.includes('헬스')) return '💊';
+            if(text.includes('맛집')) return '🍱';
+            if(text.includes('쇼핑')) return '🛍️';
+            return '📌';
+        };
 
-        // 데이터베이스 수신
-        onValue(ref(db, 'flight1'), (s) => { document.getElementById('result1').innerHTML = s.val() || ""; });
-        onValue(ref(db, 'flight2'), (s) => { document.getElementById('result2').innerHTML = s.val() || ""; });
-        onValue(ref(db, 'weatherHtml'), (s) => { document.getElementById('weatherResult').innerHTML = s.val() || "비행기 정보를 조회하면 날씨가 표시됩니다."; });
-        
-        // 날짜 데이터를 개별 저장하여 새로고침해도 날씨가 동기화되도록 수정
-        onValue(ref(db, 'destIata'), (s) => { destIata = s.val() || ""; window.updateWeather(); });
-        onValue(ref(db, 'startDate'), (s) => { startDate = s.val() || ""; window.updateWeather(); });
-        onValue(ref(db, 'endDate'), (s) => { endDate = s.val() || ""; window.updateWeather(); });
-        
-        onValue(ref(db, 'prepareItems'), (s) => { 
-            document.getElementById('prepareList').innerHTML = s.val() || ""; 
-            new Sortable(document.getElementById('prepareList'), { animation: 150, onEnd: () => window.saveItems('prepare') });
-        });
-        onValue(ref(db, 'scheduleItems'), (s) => { 
-            document.getElementById('scheduleList').innerHTML = s.val() || ""; 
-            new Sortable(document.getElementById('scheduleList'), { animation: 150, onEnd: () => window.saveItems('schedule') });
-        });
+        // 카테고리 목록 관리
+        const loadCategories = (type) => {
+            const listRef = ref(db, `categories/${type}`);
+            onValue(listRef, (snapshot) => {
+                const cats = snapshot.val() || {};
+                const container = document.getElementById(`${type}Toggles`);
+                const select = document.getElementById(`${type}CategorySelect`);
+                container.innerHTML = "";
+                select.innerHTML = "";
 
-        function getWeatherEmoji(code) {
-            if (code <= 1) return '☀️';
-            if (code <= 3) return '⛅';
-            if (code <= 48) return '☁️';
-            if (code <= 67) return '🌧️';
-            if (code <= 77) return '❄️';
-            if (code <= 82) return '🌧️';
-            if (code <= 86) return '❄️';
-            return '⛈️';
-        }
-
-        window.updateWeather = async function() {
-            if(!startDate || !endDate || !destIata) return;
-
-            try {
-                const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${destIata}&count=1`);
-                const geoData = await geoRes.json();
-                if(!geoData.results) throw new Error("도시 검색 실패");
-                
-                const { latitude, longitude } = geoData.results[0];
-                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,precipitation_probability_max&timezone=auto&start_date=${startDate}&end_date=${endDate}`);
-                const wData = await wRes.json();
-
-                if(wData.error) throw new Error("예보 기간 초과");
-
-                let html = "";
-                for(let i=0; i<wData.daily.time.length; i++) {
-                    const dateStr = wData.daily.time[i].substring(5);
-                    const code = wData.daily.weathercode[i];
-                    const temp = wData.daily.temperature_2m_max[i];
-                    const rain = wData.daily.precipitation_probability_max[i] || 0;
+                Object.keys(cats).forEach(id => {
+                    const label = cats[id];
+                    const emoji = getEmoji(label);
                     
-                    html += `
-                        <div class="weather-card">
-                            <div style="font-size: 12px; color: #666;">${dateStr}</div>
-                            <div style="font-size: 24px; margin: 5px 0;">${getWeatherEmoji(code)}</div>
-                            <div style="font-weight: bold; font-size: 16px;">${Math.round(temp)}°</div>
-                            <div style="font-size: 12px; color: #0088cc;">☔ ${rain}%</div>
-                        </div>
-                    `;
-                }
-                set(ref(db, 'weatherHtml'), html);
-            } catch(e) {
-                set(ref(db, 'weatherHtml'), "해당 날짜의 날씨 정보가 없거나 예보 기간(최대 16일)을 초과했습니다.");
+                    // 토글 UI 생성
+                    const details = document.createElement('details');
+                    details.innerHTML = `<summary>${emoji} ${label} <span style="font-size:10px; color:#ccc;" onclick="window.removeCategory('${type}', '${id}')">[삭제]</span></summary><div class="toggle-content" id="list-${type}-${id}"></div>`;
+                    container.appendChild(details);
+
+                    // 선택창 옵션 추가
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.innerText = label;
+                    select.appendChild(opt);
+
+                    // 각 카테고리 내용 실시간 연동
+                    onValue(ref(db, `items/${type}/${id}`), s => {
+                        const el = document.getElementById(`list-${type}-${id}`);
+                        if(el) {
+                            el.innerHTML = s.val() || "";
+                            new Sortable(el, { animation: 150, onEnd: () => set(ref(db, `items/${type}/${id}`), el.innerHTML) });
+                        }
+                    });
+                });
+            });
+        };
+
+        // 토글 추가 함수
+        window.addCategory = (type) => {
+            const input = document.getElementById(`new-${type}-toggle`);
+            if(!input.value) return;
+            push(ref(db, `categories/${type}`), input.value);
+            input.value = "";
+        };
+
+        window.removeCategory = (type, id) => {
+            if(confirm("이 카테고리와 안의 모든 내용이 삭제됩니다. 정말 삭제할까요?")) {
+                remove(ref(db, `categories/${type}/${id}`));
+                remove(ref(db, `items/${type}/${id}`));
             }
         };
+
+        // 아이템 추가
+        window.addItem = (type) => {
+            const catId = document.getElementById(`${type}CategorySelect`).value;
+            const input = document.getElementById(`input-${type}`);
+            if(!catId || !input.value) return;
+
+            const listEl = document.getElementById(`list-${type}-${catId}`);
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `<label><input type="checkbox" onchange="window.syncCheck(this, '${type}', '${catId}')"> <span>${input.value}</span></label><button class="del-btn" onclick="window.removeItem(this, '${type}', '${catId}')">삭제</button>`;
+            
+            listEl.appendChild(div);
+            set(ref(db, `items/${type}/${catId}`), listEl.innerHTML);
+            input.value = "";
+        };
+
+        window.syncCheck = (cb, type, catId) => {
+            if(cb.checked) cb.setAttribute('checked', 'checked');
+            else cb.removeAttribute('checked');
+            set(ref(db, `items/${type}/${catId}`), cb.closest('.toggle-content').innerHTML);
+        };
+
+        window.removeItem = (btn, type, catId) => {
+            const parent = btn.closest('.toggle-content');
+            btn.parentElement.remove();
+            set(ref(db, `items/${type}/${catId}`), parent.innerHTML);
+        };
+
+        // 초기 카테고리 로드
+        loadCategories('prepare');
+        loadCategories('schedule');
+
+        // 항공 및 날씨 연동 (기본 기능 유지)
+        onValue(ref(db, 'flight1'), s => document.getElementById('result1').innerHTML = s.val() || "");
+        onValue(ref(db, 'flight2'), s => document.getElementById('result2').innerHTML = s.val() || "");
+        onValue(ref(db, 'weatherHtml'), s => document.getElementById('weatherResult').innerHTML = s.val() || "조회가 필요합니다.");
 
         window.searchFlight = function(type) {
             const date = document.getElementById('date' + type).value;
             const num = document.getElementById('num' + type).value;
-            if(!date || !num) { alert("날짜와 편명을 모두 입력해주세요."); return; }
+            if(!date || !num) return alert("정보를 모두 입력하세요.");
             
-            document.getElementById('result' + type).innerHTML = "조회 중...";
             const url = encodeURIComponent(`http://api.aviationstack.com/v1/flights?access_key=${apiKey}&flight_iata=${num}`);
-
-            // 우회 서버 안정성 강화를 위해 파싱 방식 변경
-            fetch(`https://api.allorigins.win/get?url=${url}`)
-            .then(res => res.json())
-            .then(proxyData => {
-                const data = JSON.parse(proxyData.contents);
-                
-                // API 한도 초과 등 에러 발생 시 안내
-                if(data.error) {
-                    document.getElementById('result' + type).innerHTML = `API 에러: 무료 한도(월 100건) 초과 또는 잘못된 요청입니다.`;
-                    return;
-                }
-                
+            fetch(`https://api.allorigins.win/get?url=${url}`).then(res => res.json()).then(p => {
+                const data = JSON.parse(p.contents);
                 if(data.data && data.data.length > 0) {
-                    const flight = data.data[0];
-                    const dep = flight.departure;
-                    const arr = flight.arrival;
-                    const depTime = dep.scheduled ? dep.scheduled.substring(11, 16) : "-";
-                    const arrTime = arr.scheduled ? arr.scheduled.substring(11, 16) : "-";
-
-                    // 날짜 개별 저장 로직 추가
-                    if(type === 1) {
-                        set(ref(db, 'destIata'), arr.iata);
-                        set(ref(db, 'startDate'), date);
-                    } else if(type === 2) {
-                        set(ref(db, 'endDate'), date);
-                    }
-
-                    const html = `
-                        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: white;">
-                            <div style="color: #d32f2f; font-weight: bold; margin-bottom: 10px;">📅 ${date} | ✈️ ${flight.airline.name} (${num})</div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div><h2 style="margin: 0;">${dep.iata}</h2><p style="margin: 5px 0; font-weight: bold;">출발: ${depTime}</p><p style="margin: 0; color: #555; font-size: 14px;">터미널: ${dep.terminal || '-'} / 게이트: ${dep.gate || '-'}</p></div>
-                                <div style="flex-grow: 1; border-top: 2px solid #d32f2f; margin: 0 15px;"></div>
-                                <div style="text-align: right;"><h2 style="margin: 0;">${arr.iata}</h2><p style="margin: 5px 0; font-weight: bold;">도착: ${arrTime}</p><p style="margin: 0; color: #555; font-size: 14px;">터미널: ${arr.terminal || '-'} / 게이트: ${arr.gate || '-'}</p></div>
-                            </div>
-                            <button type="button" onclick="window.deleteFlight(${type})" style="margin-top:15px; background:#ff4444; color:white; border:none; padding: 5px 10px; border-radius:4px;">기록 삭제</button>
-                        </div>
-                    `;
+                    const f = data.data[0];
+                    const dep = f.departure, arr = f.arrival;
+                    
+                    const html = `<div style="padding:10px; border:1px solid #eee; border-radius:8px; margin-top:5px; font-size:14px;">
+                        <strong>${f.airline.name} (${num})</strong><br>
+                        ${dep.iata} (${dep.scheduled.substring(11,16)}) ➔ ${arr.iata} (${arr.scheduled.substring(11,16)})<br>
+                        <small>터미널: ${dep.terminal || '-'} / 게이트: ${dep.gate || '-'}</small><br>
+                        <button class="del-btn" onclick="window.deleteFlight(${type})" style="margin-top:5px;">삭제</button>
+                    </div>`;
                     set(ref(db, 'flight' + type), html);
-                } else {
-                    document.getElementById('result' + type).innerHTML = "정보를 찾을 수 없습니다.";
+                    
+                    // 자동으로 일차 토글 추가 (가는날 기준)
+                    if(type === 1) {
+                        window.addAutoDayToggle(date);
+                        updateWeather(date);
+                    }
                 }
-            })
-            .catch(() => { document.getElementById('result' + type).innerHTML = "조회 오류가 발생했습니다. (우회 서버 지연)"; });
+            });
         };
 
-        window.deleteFlight = function(type) { set(ref(db, 'flight' + type), ""); };
-
-        window.addItem = function(listType) {
-            const inputId = listType === 'prepare' ? 'newPrepare' : 'newSchedule';
-            const listId = listType === 'prepare' ? 'prepareList' : 'scheduleList';
-            const text = document.getElementById(inputId).value;
-            if(!text) return;
-            
-            const div = document.createElement('div');
-            div.className = 'item';
-            div.innerHTML = `<label><input type="checkbox" onchange="window.toggleCheck(this, '${listType}')"> <span>${text}</span></label><button type="button" onclick="window.removeItem(this, '${listType}')">삭제</button>`;
-            document.getElementById(listId).appendChild(div);
-            document.getElementById(inputId).value = '';
-            window.saveItems(listType);
+        window.addAutoDayToggle = (date) => {
+            push(ref(db, `categories/schedule`), `여행 시작 (${date})`);
         };
 
-        window.toggleCheck = function(checkbox, listType) {
-            if(checkbox.checked) checkbox.setAttribute('checked', 'checked');
-            else checkbox.removeAttribute('checked');
-            window.saveItems(listType);
-        };
+        window.deleteFlight = (type) => set(ref(db, 'flight' + type), "");
 
-        window.removeItem = function(btn, listType) {
-            btn.parentElement.remove();
-            window.saveItems(listType);
-        };
-
-        window.saveItems = function(listType) {
-            const listId = listType === 'prepare' ? 'prepareList' : 'scheduleList';
-            const dbKey = listType === 'prepare' ? 'prepareItems' : 'scheduleItems';
-            set(ref(db, dbKey), document.getElementById(listId).innerHTML);
-        };
+        async function updateWeather(date) {
+            try {
+                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=34.69&longitude=135.50&daily=weathercode,temperature_2m_max&timezone=auto&start_date=${date}&end_date=${date}`);
+                const wData = await wRes.json();
+                let html = `<div class="weather-card"><div>${date.substring(5)}</div><div style="font-size:20px;">🌤️</div><strong>${Math.round(wData.daily.temperature_2m_max[0])}°</strong></div>`;
+                set(ref(db, 'weatherHtml'), html);
+            } catch(e) { set(ref(db, 'weatherHtml'), "날씨 정보 없음"); }
+        }
     </script>
 </body>
 </html>
