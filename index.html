@@ -13,11 +13,16 @@
         input[type="text"], input[type="date"] { padding: 8px; margin-bottom: 5px; width: 45%; }
         .item label { display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; }
         input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        .weather-card { min-width: 70px; text-align: center; border: 1px solid #eee; border-radius: 8px; padding: 10px; background: #fff; flex-shrink: 0; }
     </style>
 </head>
 <body>
     <h2>✈️ 여행 일정 관리</h2>
-    <p>계정: impd1203@gmail.com</p>
+    
+    <div class="box">
+        <h3>🌤️ 현지 날씨 (자동 동기화)</h3>
+        <div id="weatherResult" style="display:flex; overflow-x:auto; gap:10px; padding-bottom:5px; color:#666;">비행기를 조회하면 날씨가 표시됩니다.</div>
+    </div>
 
     <div class="box">
         <h3>🛫 가는 편 비행기</h3>
@@ -36,11 +41,20 @@
     </div>
 
     <div class="box">
-        <h3>일정 및 준비물</h3>
-        <div id="itemList"></div>
+        <h3>🎒 준비물</h3>
+        <div id="prepareList"></div>
         <div style="margin-top: 10px;">
-            <input type="text" id="newItem" placeholder="새로운 일정이나 준비물" style="width: 70%;">
-            <button type="button" onclick="window.addItem()">추가</button>
+            <input type="text" id="newPrepare" placeholder="새로운 준비물" style="width: 70%;">
+            <button type="button" onclick="window.addItem('prepare')">추가</button>
+        </div>
+    </div>
+
+    <div class="box">
+        <h3>📅 방문 일정</h3>
+        <div id="scheduleList"></div>
+        <div style="margin-top: 10px;">
+            <input type="text" id="newSchedule" placeholder="새로운 일정" style="width: 70%;">
+            <button type="button" onclick="window.addItem('schedule')">추가</button>
         </div>
     </div>
 
@@ -62,13 +76,79 @@
         const db = getDatabase(app);
         const apiKey = "afb3990ec05a6fba1732ceca33cc8ca8";
 
+        let destIata = ""; // 날씨를 위한 목적지 공항 코드 저장 변수
+
+        // 파이어베이스 데이터 실시간 연동
         onValue(ref(db, 'flight1'), (snapshot) => { document.getElementById('result1').innerHTML = snapshot.val() || ""; });
         onValue(ref(db, 'flight2'), (snapshot) => { document.getElementById('result2').innerHTML = snapshot.val() || ""; });
-        onValue(ref(db, 'items'), (snapshot) => { 
-            document.getElementById('itemList').innerHTML = snapshot.val() || ""; 
-            new Sortable(document.getElementById('itemList'), { animation: 150, onEnd: window.saveItems });
+        onValue(ref(db, 'weatherHtml'), (snapshot) => { document.getElementById('weatherResult').innerHTML = snapshot.val() || "비행기를 조회하면 날씨가 표시됩니다."; });
+        onValue(ref(db, 'destIata'), (snapshot) => { destIata = snapshot.val() || ""; updateWeather(); });
+        
+        onValue(ref(db, 'prepareItems'), (snapshot) => { 
+            document.getElementById('prepareList').innerHTML = snapshot.val() || ""; 
+            new Sortable(document.getElementById('prepareList'), { animation: 150, onEnd: () => window.saveItems('prepare') });
+        });
+        onValue(ref(db, 'scheduleItems'), (snapshot) => { 
+            document.getElementById('scheduleList').innerHTML = snapshot.val() || ""; 
+            new Sortable(document.getElementById('scheduleList'), { animation: 150, onEnd: () => window.saveItems('schedule') });
         });
 
+        // 날씨 픽토그램 변환 함수
+        function getWeatherEmoji(code) {
+            if (code <= 1) return '☀️';
+            if (code <= 3) return '⛅';
+            if (code <= 48) return '☁️';
+            if (code <= 67) return '🌧️';
+            if (code <= 77) return '❄️';
+            if (code <= 82) return '🌧️';
+            if (code <= 86) return '❄️';
+            return '⛈️';
+        }
+
+        // 날씨 자동 업데이트 함수
+        async function updateWeather() {
+            const d1 = document.getElementById('date1').value;
+            const d2 = document.getElementById('date2').value;
+            if(!d1 || !d2 || !destIata) return;
+
+            set(ref(db, 'weatherHtml'), "날씨 정보 조회 중...");
+
+            try {
+                // 공항 코드로 위도/경도 찾기
+                const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${destIata}&count=1`);
+                const geoData = await geoRes.json();
+                if(!geoData.results) throw new Error("도시 찾기 실패");
+                
+                const { latitude, longitude } = geoData.results[0];
+                // 위도/경도로 날씨 예보 조회
+                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,precipitation_probability_max&timezone=auto&start_date=${d1}&end_date=${d2}`);
+                const wData = await wRes.json();
+
+                if(wData.error) throw new Error("예보 기간 초과");
+
+                let html = "";
+                for(let i=0; i<wData.daily.time.length; i++) {
+                    const dateStr = wData.daily.time[i].substring(5); // 월-일 추출
+                    const code = wData.daily.weathercode[i];
+                    const temp = wData.daily.temperature_2m_max[i];
+                    const rain = wData.daily.precipitation_probability_max[i];
+                    
+                    html += `
+                        <div class="weather-card">
+                            <div style="font-size: 12px; color: #666;">${dateStr}</div>
+                            <div style="font-size: 24px; margin: 5px 0;">${getWeatherEmoji(code)}</div>
+                            <div style="font-weight: bold; font-size: 16px;">${Math.round(temp)}°</div>
+                            <div style="font-size: 12px; color: #0088cc;">☔ ${rain}%</div>
+                        </div>
+                    `;
+                }
+                set(ref(db, 'weatherHtml'), html); // 날씨 정보도 파이어베이스에 저장하여 동기화
+            } catch(e) {
+                set(ref(db, 'weatherHtml'), "날씨 정보 없음");
+            }
+        }
+
+        // 비행기 조회 함수
         window.searchFlight = function(type) {
             const date = document.getElementById('date' + type).value;
             const num = document.getElementById('num' + type).value;
@@ -86,6 +166,9 @@
                     const arr = flight.arrival;
                     const depTime = dep.scheduled ? dep.scheduled.substring(11, 16) : "-";
                     const arrTime = arr.scheduled ? arr.scheduled.substring(11, 16) : "-";
+
+                    // 가는 편 비행기 조회 시 목적지 공항 코드를 파이어베이스에 저장 (날씨 조회용)
+                    if(type === 1) set(ref(db, 'destIata'), arr.iata); 
 
                     const html = `
                         <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: white;">
@@ -107,6 +190,7 @@
                         </div>
                     `;
                     set(ref(db, 'flight' + type), html);
+                    updateWeather(); // 비행기 조회 완료 시 날씨 동기화 시도
                 } else {
                     document.getElementById('result' + type).innerHTML = "정보를 찾을 수 없습니다.";
                 }
@@ -116,30 +200,36 @@
 
         window.deleteFlight = function(type) { set(ref(db, 'flight' + type), ""); };
 
-        window.addItem = function() {
-            const text = document.getElementById('newItem').value;
+        // 구역이 2개이므로 listType 파라미터 추가
+        window.addItem = function(listType) {
+            const inputId = listType === 'prepare' ? 'newPrepare' : 'newSchedule';
+            const listId = listType === 'prepare' ? 'prepareList' : 'scheduleList';
+            const text = document.getElementById(inputId).value;
             if(!text) return;
+            
             const div = document.createElement('div');
             div.className = 'item';
-            div.innerHTML = `<label><input type="checkbox" onchange="window.toggleCheck(this)"> <span>${text}</span></label><button type="button" onclick="window.removeItem(this)">삭제</button>`;
-            document.getElementById('itemList').appendChild(div);
-            document.getElementById('newItem').value = '';
-            window.saveItems();
+            div.innerHTML = `<label><input type="checkbox" onchange="window.toggleCheck(this, '${listType}')"> <span>${text}</span></label><button type="button" onclick="window.removeItem(this, '${listType}')">삭제</button>`;
+            document.getElementById(listId).appendChild(div);
+            document.getElementById(inputId).value = '';
+            window.saveItems(listType);
         };
 
-        window.toggleCheck = function(checkbox) {
+        window.toggleCheck = function(checkbox, listType) {
             if(checkbox.checked) checkbox.setAttribute('checked', 'checked');
             else checkbox.removeAttribute('checked');
-            window.saveItems();
+            window.saveItems(listType);
         };
 
-        window.removeItem = function(btn) {
+        window.removeItem = function(btn, listType) {
             btn.parentElement.remove();
-            window.saveItems();
+            window.saveItems(listType);
         };
 
-        window.saveItems = function() {
-            set(ref(db, 'items'), document.getElementById('itemList').innerHTML);
+        window.saveItems = function(listType) {
+            const listId = listType === 'prepare' ? 'prepareList' : 'scheduleList';
+            const dbKey = listType === 'prepare' ? 'prepareItems' : 'scheduleItems';
+            set(ref(db, dbKey), document.getElementById(listId).innerHTML);
         };
     </script>
 </body>
