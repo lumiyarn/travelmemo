@@ -10,21 +10,23 @@
         .box { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 12px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         h3 { margin-top: 0; display: flex; align-items: center; gap: 8px; }
         
-        details { border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+        details { border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; overflow: hidden; background: #fff; }
         summary { padding: 12px; background: #f9f9f9; cursor: pointer; font-weight: bold; list-style: none; display: flex; justify-content: space-between; }
         summary::after { content: '▼'; font-size: 12px; color: #aaa; }
         details[open] summary::after { content: '▲'; }
-        .toggle-content { padding: 10px; background: white; min-height: 30px; }
+        
+        /* 빈 토글도 잘 보이도록 점선 표시 */
+        .toggle-content { padding: 10px; min-height: 40px; background: #fafafa; border: 1px dashed #ddd; margin: 5px; border-radius: 6px; }
 
-        .item { padding: 12px; background: #fff; border: 1px solid #f0f0f0; margin-bottom: 5px; border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-        .item label { display: flex; align-items: center; gap: 8px; flex-grow: 1; cursor: pointer; }
+        .item { padding: 12px; background: #fff; border: 1px solid #eee; margin-bottom: 5px; border-radius: 6px; cursor: grab; display: flex; justify-content: space-between; align-items: center; font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .item label { display: flex; align-items: center; gap: 8px; flex-grow: 1; cursor: pointer; margin: 0; }
         input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
         .del-btn { background: #ffeded; color: #ff4444; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
 
-        .input-group { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; border-top: 1px solid #eee; pt: 10px; padding-top: 10px; }
+        .input-group { display: flex; gap: 5px; margin-top: 15px; flex-wrap: wrap; border-top: 1px solid #eee; padding-top: 15px; }
         input[type="text"], input[type="date"], select { padding: 10px; border: 1px solid #ddd; border-radius: 6px; flex-grow: 1; min-width: 100px; }
         .add-btn { background: #4A90E2; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .add-toggle-btn { background: #34A853; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 10px; }
+        .add-toggle-btn { background: #34A853; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
 
         .weather-scroll { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; }
         .weather-card { min-width: 80px; text-align: center; border: 1px solid #eee; border-radius: 10px; padding: 10px; background: #fff; }
@@ -36,17 +38,21 @@
 
     <div class="box">
         <h3>🛫 가는 편 비행기</h3>
-        <input type="date" id="date1">
-        <input type="text" id="num1" placeholder="편명 (예: KE081)">
-        <button type="button" class="add-btn" onclick="window.searchFlight(1)">조회</button>
+        <div style="display: flex; gap: 5px;">
+            <input type="date" id="date1">
+            <input type="text" id="num1" placeholder="편명 (예: KE081)">
+            <button type="button" class="add-btn" onclick="window.searchFlight(1)">조회</button>
+        </div>
         <div id="result1" style="margin-top:10px;"></div>
     </div>
 
     <div class="box">
         <h3>🛬 오는 편 비행기</h3>
-        <input type="date" id="date2">
-        <input type="text" id="num2" placeholder="편명 (예: OZ522)">
-        <button type="button" class="add-btn" onclick="window.searchFlight(2)">조회</button>
+        <div style="display: flex; gap: 5px;">
+            <input type="date" id="date2">
+            <input type="text" id="num2" placeholder="편명 (예: OZ522)">
+            <button type="button" class="add-btn" onclick="window.searchFlight(2)">조회</button>
+        </div>
         <div id="result2" style="margin-top:10px;"></div>
     </div>
 
@@ -57,29 +63,33 @@
 
     <div class="box">
         <h3>🎒 준비물 리스트</h3>
-        <div style="display: flex; gap: 5px;">
-            <input type="text" id="new-prep-toggle" placeholder="새 준비물 카테고리 (예: 캠핑용품)">
-            <button class="add-toggle-btn" onclick="window.addCategory('prepare')">토글 추가</button>
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <input type="text" id="new-prepare-toggle" placeholder="새 카테고리 (예: 캠핑용품)">
+            <button type="button" class="add-toggle-btn" onclick="window.addCategory('prepare')">토글 추가</button>
         </div>
+        
         <div id="prepareToggles"></div>
+        
         <div class="input-group">
             <select id="prepareCategorySelect"></select>
             <input type="text" id="input-prepare" placeholder="무엇을 챙길까요?">
-            <button class="add-btn" onclick="window.addItem('prepare')">추가</button>
+            <button type="button" class="add-btn" onclick="window.addItem('prepare')">추가</button>
         </div>
     </div>
 
     <div class="box">
         <h3>📅 방문 일정</h3>
-        <div style="display: flex; gap: 5px;">
-            <input type="text" id="new-sched-toggle" placeholder="새 일정 카테고리 (예: 맛집탐방)">
-            <button class="add-toggle-btn" onclick="window.addCategory('schedule')">토글 추가</button>
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <input type="text" id="new-schedule-toggle" placeholder="새 카테고리 (예: 1일차 맛집)">
+            <button type="button" class="add-toggle-btn" onclick="window.addCategory('schedule')">토글 추가</button>
         </div>
+        
         <div id="scheduleToggles"></div>
+        
         <div class="input-group">
             <select id="scheduleCategorySelect"></select>
             <input type="text" id="input-schedule" placeholder="어디를 방문할까요?">
-            <button class="add-btn" onclick="window.addItem('schedule')">추가</button>
+            <button type="button" class="add-btn" onclick="window.addItem('schedule')">추가</button>
         </div>
     </div>
 
@@ -99,9 +109,8 @@
         
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const apiKey = "afb3990ec05a6fba1732ceca33cc8ca8"; // 귀하의 API 키 적용됨
+        const apiKey = "afb3990ec05a6fba1732ceca33cc8ca8";
 
-        // 이모지 판단기
         const getEmoji = (text) => {
             if(text.includes('필수')) return '🚨';
             if(text.includes('공항')) return '✈️';
@@ -113,11 +122,19 @@
             return '📌';
         };
 
-        // 카테고리 목록 관리
         const loadCategories = (type) => {
             const listRef = ref(db, `categories/${type}`);
             onValue(listRef, (snapshot) => {
-                const cats = snapshot.val() || {};
+                let cats = snapshot.val();
+                
+                // 데이터베이스가 비어있을 경우 기본 토글 생성
+                if (!cats) {
+                    if(type === 'prepare') cats = { 'default1': '필수 준비물' };
+                    if(type === 'schedule') cats = { 'default1': '방문할 곳' };
+                    set(listRef, cats);
+                    return;
+                }
+
                 const container = document.getElementById(`${type}Toggles`);
                 const select = document.getElementById(`${type}CategorySelect`);
                 container.innerHTML = "";
@@ -127,18 +144,16 @@
                     const label = cats[id];
                     const emoji = getEmoji(label);
                     
-                    // 토글 UI 생성
                     const details = document.createElement('details');
+                    details.open = true; // 새로 고침 시 토글 열어두기
                     details.innerHTML = `<summary>${emoji} ${label} <span style="font-size:10px; color:#ccc;" onclick="window.removeCategory('${type}', '${id}')">[삭제]</span></summary><div class="toggle-content" id="list-${type}-${id}"></div>`;
                     container.appendChild(details);
 
-                    // 선택창 옵션 추가
                     const opt = document.createElement('option');
                     opt.value = id;
                     opt.innerText = label;
                     select.appendChild(opt);
 
-                    // 각 카테고리 내용 실시간 연동
                     onValue(ref(db, `items/${type}/${id}`), s => {
                         const el = document.getElementById(`list-${type}-${id}`);
                         if(el) {
@@ -150,7 +165,6 @@
             });
         };
 
-        // 토글 추가 함수
         window.addCategory = (type) => {
             const input = document.getElementById(`new-${type}-toggle`);
             if(!input.value) return;
@@ -159,13 +173,12 @@
         };
 
         window.removeCategory = (type, id) => {
-            if(confirm("이 카테고리와 안의 모든 내용이 삭제됩니다. 정말 삭제할까요?")) {
+            if(confirm("이 카테고리와 안의 모든 내용이 삭제됩니다. 계속할까요?")) {
                 remove(ref(db, `categories/${type}/${id}`));
                 remove(ref(db, `items/${type}/${id}`));
             }
         };
 
-        // 아이템 추가
         window.addItem = (type) => {
             const catId = document.getElementById(`${type}CategorySelect`).value;
             const input = document.getElementById(`input-${type}`);
@@ -174,7 +187,7 @@
             const listEl = document.getElementById(`list-${type}-${catId}`);
             const div = document.createElement('div');
             div.className = 'item';
-            div.innerHTML = `<label><input type="checkbox" onchange="window.syncCheck(this, '${type}', '${catId}')"> <span>${input.value}</span></label><button class="del-btn" onclick="window.removeItem(this, '${type}', '${catId}')">삭제</button>`;
+            div.innerHTML = `<label><input type="checkbox" onchange="window.syncCheck(this, '${type}', '${catId}')"> <span>${input.value}</span></label><button type="button" class="del-btn" onclick="window.removeItem(this, '${type}', '${catId}')">삭제</button>`;
             
             listEl.appendChild(div);
             set(ref(db, `items/${type}/${catId}`), listEl.innerHTML);
@@ -193,46 +206,40 @@
             set(ref(db, `items/${type}/${catId}`), parent.innerHTML);
         };
 
-        // 초기 카테고리 로드
         loadCategories('prepare');
         loadCategories('schedule');
 
-        // 항공 및 날씨 연동 (기본 기능 유지)
         onValue(ref(db, 'flight1'), s => document.getElementById('result1').innerHTML = s.val() || "");
         onValue(ref(db, 'flight2'), s => document.getElementById('result2').innerHTML = s.val() || "");
-        onValue(ref(db, 'weatherHtml'), s => document.getElementById('weatherResult').innerHTML = s.val() || "조회가 필요합니다.");
+        onValue(ref(db, 'weatherHtml'), s => document.getElementById('weatherResult').innerHTML = s.val() || "비행기 조회가 필요합니다.");
 
         window.searchFlight = function(type) {
             const date = document.getElementById('date' + type).value;
             const num = document.getElementById('num' + type).value;
-            if(!date || !num) return alert("정보를 모두 입력하세요.");
+            if(!date || !num) return alert("날짜와 편명을 모두 입력하세요.");
             
             const url = encodeURIComponent(`http://api.aviationstack.com/v1/flights?access_key=${apiKey}&flight_iata=${num}`);
+            document.getElementById('result' + type).innerHTML = "조회 중...";
+
             fetch(`https://api.allorigins.win/get?url=${url}`).then(res => res.json()).then(p => {
                 const data = JSON.parse(p.contents);
                 if(data.data && data.data.length > 0) {
                     const f = data.data[0];
                     const dep = f.departure, arr = f.arrival;
                     
-                    const html = `<div style="padding:10px; border:1px solid #eee; border-radius:8px; margin-top:5px; font-size:14px;">
+                    const html = `<div style="padding:10px; border:1px solid #eee; border-radius:8px; margin-top:5px; font-size:14px; background: #fff;">
                         <strong>${f.airline.name} (${num})</strong><br>
-                        ${dep.iata} (${dep.scheduled.substring(11,16)}) ➔ ${arr.iata} (${arr.scheduled.substring(11,16)})<br>
-                        <small>터미널: ${dep.terminal || '-'} / 게이트: ${dep.gate || '-'}</small><br>
-                        <button class="del-btn" onclick="window.deleteFlight(${type})" style="margin-top:5px;">삭제</button>
+                        ${dep.iata} (${dep.scheduled ? dep.scheduled.substring(11,16) : '-'}) ➔ ${arr.iata} (${arr.scheduled ? arr.scheduled.substring(11,16) : '-'})<br>
+                        <small style="color:#666;">터미널: ${dep.terminal || '-'} / 게이트: ${dep.gate || '-'}</small><br>
+                        <button type="button" class="del-btn" onclick="window.deleteFlight(${type})" style="margin-top:8px;">기록 삭제</button>
                     </div>`;
                     set(ref(db, 'flight' + type), html);
                     
-                    // 자동으로 일차 토글 추가 (가는날 기준)
-                    if(type === 1) {
-                        window.addAutoDayToggle(date);
-                        updateWeather(date);
-                    }
+                    if(type === 1) updateWeather(date);
+                } else {
+                    document.getElementById('result' + type).innerHTML = "정보를 찾을 수 없습니다.";
                 }
-            });
-        };
-
-        window.addAutoDayToggle = (date) => {
-            push(ref(db, `categories/schedule`), `여행 시작 (${date})`);
+            }).catch(() => document.getElementById('result' + type).innerHTML = "조회 오류 (우회 서버 지연)");
         };
 
         window.deleteFlight = (type) => set(ref(db, 'flight' + type), "");
@@ -241,7 +248,7 @@
             try {
                 const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=34.69&longitude=135.50&daily=weathercode,temperature_2m_max&timezone=auto&start_date=${date}&end_date=${date}`);
                 const wData = await wRes.json();
-                let html = `<div class="weather-card"><div>${date.substring(5)}</div><div style="font-size:20px;">🌤️</div><strong>${Math.round(wData.daily.temperature_2m_max[0])}°</strong></div>`;
+                let html = `<div class="weather-card"><div>${date.substring(5)}</div><div style="font-size:24px; margin:5px 0;">🌤️</div><strong style="font-size:16px;">${Math.round(wData.daily.temperature_2m_max[0])}°</strong></div>`;
                 set(ref(db, 'weatherHtml'), html);
             } catch(e) { set(ref(db, 'weatherHtml'), "날씨 정보 없음"); }
         }
